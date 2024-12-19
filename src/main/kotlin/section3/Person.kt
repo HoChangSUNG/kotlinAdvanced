@@ -1,5 +1,8 @@
 package section3
 
+import kotlin.properties.Delegates
+import kotlin.properties.PropertyDelegateProvider
+import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 // lateinit -> 초기화를 지연시킨 변수, 초기화 로직이 여러 곳에 위치할 수 있음/ 초기화 없이 호출하면 예외 발생
@@ -43,7 +46,7 @@ class Person3 {
 }
 
 class Person3Template {
-    private val delegateProperty = LazyInitProperty{
+    private val delegateProperty = LazyInitProperty {
         Thread.sleep(2_000)
         "김수한무"
     }
@@ -62,8 +65,60 @@ class LazyInitProperty<T>(val init: () -> T) {
             return _value!!
         }
 
-    operator fun getValue(thsRef: Any, property: KProperty<*>): T{
+    operator fun getValue(thsRef: Any, property: KProperty<*>): T {
         return value
     }
 }
 
+class LazyInitProperty2<T>(val init: () -> T) : ReadOnlyProperty<Any, T> {
+    private var _value: T? = null
+    val value: T
+        get() {
+            if (_value == null) {
+                this._value = init()
+            }
+            return _value!!
+        }
+
+    override fun getValue(thisRef: Any, property: KProperty<*>): T {
+        return value
+    }
+}
+
+class Person4 {
+    var age: Int by Delegates.observable(20) { property, oldValue, newValue ->
+        println("이전 값 : $oldValue 새로운 값: ${newValue}")
+    }
+}
+
+class Person5 {
+    val name by DelegateProvider("최태현") // 정상 동작 o
+    val country by DelegateProvider("한국") // 정상동작 x
+}
+
+class DelegateProvider(
+    private val initValue: String
+) : PropertyDelegateProvider<Any, DelegateProperty> {
+
+    override fun provideDelegate(thisRef: Any, property: KProperty<*>): DelegateProperty {
+        if (property.name != "name") {
+            throw IllegalArgumentException("name만 연결 가능합니다. 현재 : ${property.name}")
+        }
+        return DelegateProperty(initValue)
+    }
+}
+
+class DelegateProperty(
+    private val initValue: String
+) : ReadOnlyProperty<Any, String> {
+    override fun getValue(thisRef: Any, property: KProperty<*>): String {
+        return initValue
+    }
+
+}
+
+fun main() {
+    val p = Person4()
+    p.age = 30
+    Person5() // country property는 안됨
+}
