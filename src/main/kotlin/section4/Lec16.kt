@@ -1,7 +1,5 @@
 package section4
 
-class Lec16 {
-}
 
 fun main() {
     val filter: StringFilter = object : StringFilter {
